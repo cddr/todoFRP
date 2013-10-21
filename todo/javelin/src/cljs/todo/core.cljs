@@ -1,7 +1,7 @@
 (ns todo.core
   (:require [clojure.browser.event :as event]
             [clojure.string :as string]
-            [tailrecursion.javelin]
+            [tailrecursion.javelin :refer [cell]]
             [dommy.template :refer [node]]
             [todo.utils :as utils])
   (:use [cljs.reader :only [read-string]]
@@ -9,7 +9,7 @@
         [domina.css :only [sel]]
         [domina.events :only [capture! listen!]]
         [domina.xpath :only [xpath]])
-  (:require-macros [tailrecursion.javelin.macros :refer [cell]]))
+  (:require-macros [tailrecursion.javelin :refer [cell= defc defc=]]))
 
 (def ENTER-KEY 13)
 
@@ -26,11 +26,11 @@
 ;; todo reactors ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def todo-id (atom 0))
-(def todos (cell '[]))
-(def filter-fn (cell get-all-items))
-(def filtered-todos (cell (filter-fn todos)))
-(def active-items (cell (get-active-items todos)))
-(def completed-items (cell (get-completed-items todos)))
+(defc todos [])
+(defc filter-fn get-all-items)
+(defc= filtered-todos (filter-fn todos))
+(defc= active-items (get-active-items todos))
+(defc= completed-items (get-completed-items todos))
 
 ;; Functions for todo list ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -145,22 +145,29 @@
 
 (defn ^:export start []
   (load-todos!)
-  (cell (save-todos! todos))
+  (cell= (save-todos! todos))
   ;; update the main and footer sections ;;;;;;;;;;;;;;;;;;;;;;;
-  (cell (utils/toggle-class! (sel "#main") "hidden" (empty? todos)))
-  (cell (utils/toggle-class! (sel "#footer") "hidden" (empty? todos)))
+  (cell= (utils/toggle-class! (sel "#main") "hidden" (empty? todos)))
+  (cell= (utils/toggle-class! (sel "#footer") "hidden" (empty? todos)))
 
-  ;; update the UI here ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (cell (show-todos filtered-todos))
-  (cell (set-html! (sel "#todo-count")
-                       (let [active-num (count active-items)]
-                         (.-outerHTML (node [:span#todo-count
-                                             [:strong (str active-num)]
-                                             (str " item" (if-not (= active-num 1) "s") " left")])))))
-  (cell (update-completed-count completed-items))
-  (cell (let [node (by-id "toggle-all")
+  ;; ;; update the UI here ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (cell= (show-todos filtered-todos))
+  (cell= (set-html! (sel "#todo-count")
+                    (let [active-num (count active-items)]
+                      (.-outerHTML (node [:span#todo-count
+                                          [:strong (str active-num)]
+                                          (str " item" (if-not (= active-num 1) "s") " left")])))))
+
+  ;; (cell= (update-completed-count completed-items))
+  (cell= (update-completed-count completed-items))
+
+  (cell= (let [node (by-id "toggle-all")
               result (completed-all? todos)]
           (aset node "checked" result)))
+
+  (cell= (let [node (by-id "toggle-all")
+               result (completed-all? todos)]
+           (aset node "checked" result)))
   
   ;; event listeners ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (listen! (sel "#new-todo") :keypress #(if (= ENTER-KEY (:keyCode %))
